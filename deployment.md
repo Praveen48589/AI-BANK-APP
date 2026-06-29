@@ -24,7 +24,7 @@ terraform apply
 ## Step 2: Configure kubectl
 
 ```bash
-aws eks update-kubeconfig --name bankapp-eks --region us-west-2
+aws eks update-kubeconfig --name bankapp-eks --region ap-south-1
 kubectl get nodes
 # Should show 3 nodes in Ready state
 ```
@@ -121,7 +121,7 @@ kubectl get secret kube-prometheus-grafana -n monitoring \
 
 ## Step 7: Build & Push Docker Image
 
-> CI does this automatically on push to `feat/gitops`. This step is only needed for the **first deploy** (image doesn't exist on DockerHub yet).
+> CI does this automatically on push to `main`. This step is only needed for the **first deploy** (image doesn't exist on DockerHub yet).
 
 ```bash
 # IMPORTANT: EKS runs amd64 nodes. If building on Apple Silicon (M1/M2/M3),
@@ -129,7 +129,7 @@ kubectl get secret kube-prometheus-grafana -n monitoring \
 #   "no match for platform in manifest: not found"
 
 docker buildx build --platform linux/amd64 \
-  -t trainwithshubham/ai-bankapp-eks:latest \
+  -t praveen416/ai-bankapp-eks:latest \
   --push .
 ```
 

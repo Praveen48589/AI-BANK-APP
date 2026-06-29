@@ -36,20 +36,14 @@ graph TD
             Ollama[Ollama EC2 - AI Engine]
         end
 
-        subgraph "Identity & Secrets"
-            Secrets[AWS Secrets Manager]
-            OIDC[IAM OIDC Provider]
-        end
-
-        subgraph "Registry"
-            ECR[Amazon ECR]
+        subgraph "DockerHub"
+            ECR[DockerHub]
         end
     end
 
-    GH -->|1. OIDC Authentication| OIDC
-    GH -->|2. Push Scanned Image| ECR
-    GH -->|3. SSH Orchestration| AppEC2
-    GH -->|4. DAST Scan| AppEC2
+    GH -->|1. Push Scanned Image| ECR
+    GH -->|2. SSH Orchestration| AppEC2
+    GH -->|3. DAST Scan| AppEC2
     
     User -->|Port 8080| AppEC2
     AppEC2 -->|JDBC Connection| DB
@@ -72,7 +66,7 @@ The CI/CD pipeline enforces **9 sequential security gates** before any code reac
 | 4 | SCA | OWASP Dependency Check (first time run can take more than 30+ minutes) | Scans Maven dependencies for known CVEs |
 | 5 | Build | Maven | Compiles and packages the application |
 | 6 | Container Scan | Trivy | Scans the Docker image for OS and library vulnerabilities |
-| 7 | Push | Amazon ECR | Pushes the image only after Trivy passes |
+| 7 | Push | DockerHub | Pushes the image only after Trivy passes |
 | 8 | Deploy | SSH / Docker Compose | Automated deployment to AWS EC2 |
 | 9 | DAST | OWASP ZAP | Dynamic attack surface scanning on live app |
 
@@ -93,13 +87,7 @@ The CI/CD pipeline enforces **9 sequential security gates** before any code reac
 
 ### Phase 1: AWS Infrastructure Initialization
 
-1. **Container Registry (ECR)**:
-
-   - Establish a private ECR repository named `devsecops-bankapp`.
-
-      ![ECR](screenshots/2.png)
-
-2. **Application Server (EC2)**:
+1. **Application Server (EC2)**:
 
    - Deploy an Ubuntu 22.04 instance with below `User Data`.
 
@@ -117,25 +105,7 @@ The CI/CD pipeline enforces **9 sequential security gates** before any code reac
 
       > Better to give `name` to Security Group created.
 
-   - Create an IAM Instance Profile(IAM EC2 role) containing permissions:
-     - `AmazonEC2ContainerRegistryPowerUser`
-     - `AWSSecretsManagerClientReadOnlyAccess`
-
-        ![Permissions](screenshots/3.png)
-
-   - Attach it to Application EC2. Select EC2 -> Actions -> Security -> Modify IAM role -> Attach created IAM role.
-
-      ![IAM role](screenshots/4.png)
-   
-   - Connect to EC2 Instance and Run below command to check whether IAM role is working or not.
-
-      ```bash
-      aws sts get-caller-identity
-      ```
-
-      You will get your account details with IAM role assumed.
-
-3. **AI Engine Tier (Ollama)**:
+2. **AI Engine Tier (Ollama)**:
    - Deploy a dedicated Ubuntu EC2 instance.
    - Open Inbound Port `11434` from the Application EC2 Security Group.
 
@@ -157,107 +127,29 @@ The CI/CD pipeline enforces **9 sequential security gates** before any code reac
 
 ---
 
-### Phase 2: Security and Identity Configuration
-
-The deployment pipeline utilizes OpenID Connect (OIDC) for secure, keyless authentication between GitHub and AWS.
-
-1. **IAM Identity Provider**:
-   - Provider URL: `https://token.actions.githubusercontent.com`
-   - Audience: `sts.amazonaws.com`
-
-      ![identity-provider](screenshots/10.png)
-
-2. **Deployment Role**:
-   - Click on created `Identity provider`
-   - Asign & Create a role named `GitHubActionsRole`.
-   - Enter following details:
-      - `Identity provider`: Select created one.
-      - `Audience`: Select created one.
-      - `GitHub organization`: Your GitHub Username or Orgs Name where this repo is located.
-      - `GitHub repository`: Write the Repository name of this project. `(e.g, DevSecOps-Bankapp)`
-      - `GitHub branch`: branch to use for this project `(e.g, devsecops)`
-      - Click on `Next`
-
-      ![role](screenshots/11.png)
-
-   - Assign `AmazonEC2ContainerRegistryPowerUser` permissions.
-
-      ![iam permission](screenshots/12.png)
-
-   - Click on `Next`, Enter name of role and click on `Create role`.
-
-      ![iam role](screenshots/13.png)
-
----
-
-### Phase 3: Secrets and Pipeline Configuration
+### Phase 2: Secrets and Pipeline Configuration
 
 #### 1. AWS Secrets Manager
 Create a secret named `bankapp/prod-secrets` in `Other type of secret` with the following key-value pairs:
 
 | Secret Key | Description | Sample/Default Value |
 | :--- | :--- | :--- |
-| `DB_HOST` | The MySQL container service name | `db` |
+| `DB_HOST` | The MySQL container service name | `mysql-service` |
 | `DB_PORT` | The database port | `3306` |
 | `DB_NAME` | The application database name | `bankappdb` |
-| `DB_USER` | The database username | `bankuser` |
+| `DB_USER` | The database username | `root` |
 | `DB_PASSWORD` | The database password | `Test@123` |
 | `OLLAMA_URL` | The private URL for the AI tier | `http://<PRIVATE-IP>:11434` |
 
-![aws-ssm](screenshots/14.png)
 
 #### 2. GitHub Repository Secrets
 Configure the following Action Secrets within your GitHub repository settings:
 
 | Secret Name | Description |
 | :--- | :--- |
-| `AWS_ROLE_ARN` | The ARN of the `GitHubActionsRole` |
-| `AWS_REGION` | The AWS region where resources are deployed |
-| `AWS_ACCOUNT_ID` | Your 12-digit AWS account number |
-| `ECR_REPOSITORY` | The name of the ECR repository (`devsecops-bankapp`) |
 | `EC2_HOST` | The public IP address of the Application EC2 |
 | `EC2_USER` | The SSH username (default is `ubuntu`) |
 | `EC2_SSH_KEY` | The content of your private SSH key (`.pem` file) |
-| `NVD_API_KEY` | Free API key from [nvd.nist.gov](https://nvd.nist.gov/developers/request-an-api-key) for OWASP SCA scans |
-
-> **Note**: The `NVD_API_KEY` raises the NVD API rate limit from ~5 requests/30s to 50 requests/30s, reducing the OWASP Dependency Check scan time from 30+ minutes to under 8 minutes. Without it the SCA job will time out.
-
-#### Obtaining the NVD API Key
-
-**Step 1: Request the API Key**
-- Go to [https://nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key).
-- Enter your `Organzation name`, `email address`, and select `organization type`.
-- Accept **Terms of Use** and Click **Submit**.
-
-   ![request](screenshots/22.png)
-
-**Step 2: Activate the API Key**
-- Check your email inbox for a message from `nvd-noreply@nist.gov`.
-
-   ![email](screenshots/25.png)
-
-- Click the **activation link** in the email.
-- Enter `UUID` provided in email and Enter `Email` to activate
-- The link confirms your key and marks it as active.  
-
-   ![api-activate](screenshots/23.png)
-
-**Step 3: Get the API Key**
-- After clicking the activation link, the page will generate your API key.
-- Copy and save it securely.
-
-   ![api-key](screenshots/24.png)
-
-**Step 4: Add as GitHub Secret**
-- Go to your repository on GitHub.
-- Navigate to **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
-- Name: `NVD_API_KEY`
-- Value: Paste the copied API key.
-- Click **Add Secret**.
-
-![github-secret](screenshots/15.png)
-
----
 
 ## Continuous Integration and Deployment
 
@@ -271,7 +163,7 @@ The DevSecOps lifecycle is orchestrated through the [DevSecOps Main Pipeline](.g
 | 4 | `sca` | OWASP Dependency Check | **Strict**: Fails if any dependency has CVSS > 7.0. |
 | 5 | `build` | Maven | Standard build and test stage. |
 | 6 | `image_scan` | Trivy | **Strict**: Scans Docker image layers. Fails on any High/Critical CVE. |
-| 7 | `push_to_ecr` | Amazon ECR | Pushes the verified image to AWS ECR using OIDC. |
+| 7 | `push_to_dockerhub` | DockerHub | Pushes the verified image to DockerHub. |
 | 8 | `deploy` | SSH / Docker Compose | Fetches secrets from AWS Secrets Manager and recreates the container. |
 | 9 | `dast` | OWASP ZAP | **Audit Mode**: Comprehensive scan that reports findings as artifacts, but does not block the pipeline. |
 
@@ -280,12 +172,6 @@ All scan reports (OWASP, Trivy, ZAP) are uploaded as downloadable **Artifacts** 
 - CI/CD
 
    ![github-actions](screenshots/16.png)
-
-- Artifacts
-
-   ![artifacts](screenshots/26.png)
-   
----
 
 ## Operational Verification
 
@@ -321,6 +207,6 @@ All scan reports (OWASP, Trivy, ZAP) are uploaded as downloadable **Artifacts** 
 
 Happy Learning
 
-**TrainWithShubham**  
+**Praveen Tomar**  
 
 </div>

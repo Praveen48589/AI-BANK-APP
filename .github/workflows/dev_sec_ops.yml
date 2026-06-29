@@ -1,0 +1,47 @@
+name: DevSecOps Main Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'screenshots/**'
+      - 'scripts/**'
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+jobs:
+
+  # STAGE 1: Code Linting 
+
+  Linting:
+    uses: ./.github/workflows/lint.yml
+    secrets: inherit
+
+  # STAGE 2: Secret Scanning
+ 
+  SecretScanning:
+    needs: Linting
+    uses: ./.github/workflows/secrets_scan.yml
+    secrets: inherit
+
+ 
+  # STAGE 3: Security Scanning
+ 
+  security:
+    needs: SecretScanning
+    uses: ./.github/workflows/security.yml
+    secrets: inherit
+
+  # STAGE 4: GitOps
+
+  Gitops:
+    needs: [Linting,SecretScanning,security]
+    uses: ./.github/workflows/gitops-ci.yml
+    secrets: inherit
+
