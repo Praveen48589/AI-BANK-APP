@@ -41,7 +41,7 @@ jobs:
   # STAGE 4: GitOps
 
   Gitops:
-    needs: [Linting,SecretScanning,security]
+    needs: security
     uses: ./.github/workflows/gitops-ci.yml
     secrets: inherit
 
