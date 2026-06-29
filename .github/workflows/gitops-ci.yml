@@ -1,15 +1,8 @@
 name: GitOps CI - Build & Push to DockerHub
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'pom.xml'
-      - 'Dockerfile'
-      - 'k8s/**'
-  workflow_dispatch:
-
+   workflow_call:
+    
 permissions:
   contents: write
 
