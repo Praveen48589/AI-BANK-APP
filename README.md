@@ -171,7 +171,7 @@ All scan reports (OWASP, Trivy, ZAP) are uploaded as downloadable **Artifacts** 
 
 - CI/CD
 
-   ![github-actions](screenshots/16.png.png)
+   ![github-actions](screenshots/16.png)
 
 ## Operational Verification
 
