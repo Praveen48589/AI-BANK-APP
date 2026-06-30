@@ -153,6 +153,8 @@ Configure the following Action Secrets within your GitHub repository settings:
 | `EC2_HOST` | The public IP address of the Application EC2 |
 | `EC2_USER` | The SSH username (default is `ubuntu`) |
 | `EC2_SSH_KEY` | The content of your private SSH key (`.pem` file) |
+| `EMAIL_USERNAME` | The your working gmail
+| `EMAIL_PASSWORD` | Your 16-character Google App Password , like : abcd jsur kses 
 
 ## Continuous Integration and Deployment
 
