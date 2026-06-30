@@ -63,12 +63,11 @@ The CI/CD pipeline enforces **9 sequential security gates** before any code reac
 | 1 | Secret Scan | Gitleaks | Scans entire Git history for leaked secrets |
 | 2 | Lint | Checkstyle | Enforces Java Google-Style coding standards |
 | 3 | SAST | Semgrep | Scans Java source code for security flaws and OWASP Top 10 |
-| 4 | SCA | OWASP Dependency Check (first time run can take more than 30+ minutes) | Scans Maven dependencies for known CVEs |
-| 5 | Build | Maven | Compiles and packages the application |
-| 6 | Container Scan | Trivy | Scans the Docker image for OS and library vulnerabilities |
-| 7 | Push | DockerHub | Pushes the image only after Trivy passes |
-| 8 | Deploy | SSH / Docker Compose | Automated deployment to AWS EC2 |
-| 9 | DAST | OWASP ZAP | Dynamic attack surface scanning on live app |
+| 4 | Build | Maven | Compiles and packages the application |
+| 5 | Container Scan | Trivy | Scans the Docker image for OS and library vulnerabilities |
+| 6 | Push | DockerHub | Pushes the image only after Trivy passes |
+| 7 | Notification | SMTP | Notify about Pipeline success or failures
+| 8 | Deploy | On AWS eks Cluster | Automated deployment to Eks Cluster |
 
 ---
 
@@ -79,7 +78,7 @@ The CI/CD pipeline enforces **9 sequential security gates** before any code reac
 - **Persistence Layer**: MySQL 8.0 (Docker Container)
 - **AI Integration**: Ollama (TinyLlama)
 - **DevOps Tooling**: Docker, Docker Compose, GitHub Actions, AWS CLI, jq
-- **Infrastructure**: Amazon EC2, Amazon ECR, Amazon VPC
+- **Infrastructure**: Amazon EC2, DockerHub, Amazon VPC
 
 ---
 
@@ -160,12 +159,10 @@ The DevSecOps lifecycle is orchestrated through the [DevSecOps Main Pipeline](.g
 | 1 | `gitleaks` | Gitleaks | **Strict**: Fails if any secrets are found in history. |
 | 2 | `lint` | Checkstyle | **Audit**: Reports style violations but doesn't block (Google Style). |
 | 3 | `sast` | Semgrep | **Strict**: Scans code for vulnerabilities. Fails on findings. |
-| 4 | `sca` | OWASP Dependency Check | **Strict**: Fails if any dependency has CVSS > 7.0. |
-| 5 | `build` | Maven | Standard build and test stage. |
-| 6 | `image_scan` | Trivy | **Strict**: Scans Docker image layers. Fails on any High/Critical CVE. |
-| 7 | `push_to_dockerhub` | DockerHub | Pushes the verified image to DockerHub. |
-| 8 | `deploy` | SSH / Docker Compose | Fetches secrets from AWS Secrets Manager and recreates the container. |
-| 9 | `dast` | OWASP ZAP | **Audit Mode**: Comprehensive scan that reports findings as artifacts, but does not block the pipeline. |
+| 4 | `build` | Maven | Standard build and test stage. |
+| 5 | `image_scan` | Trivy | **Strict**: Scans Docker image layers. Fails on any High/Critical CVE. |
+| 6 | `push_to_dockerhub` | DockerHub | Pushes the verified image to DockerHub. |
+| 7 | `deploy` | Aws EKs Cluster | Deploy scalable Application on eks . |
 
 All scan reports (OWASP, Trivy, ZAP) are uploaded as downloadable **Artifacts** in each GitHub Actions run, YOu can look into the **Artifacts**.
 
@@ -186,7 +183,7 @@ All scan reports (OWASP, Trivy, ZAP) are uploaded as downloadable **Artifacts** 
 - **Database Connectivity**: 
 
   ```bash
-  docker exec -it db mysql -u <USER> -p bankappdb -e "SELECT * FROM accounts;"
+  docker exec -it mysql-service mysql -u <USER> -p bankappdb -e "SELECT * FROM accounts;"
   ```
 
   ![mysql-result](screenshots/17.png)
