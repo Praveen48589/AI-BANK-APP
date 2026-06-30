@@ -1,4 +1,4 @@
-name: DevSecOps Main Pipeline
+name: DevSecOps Pipeline
 
 on:
   push:
