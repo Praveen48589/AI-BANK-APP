@@ -194,8 +194,6 @@ All scan reports (OWASP, Trivy, ZAP) are uploaded as downloadable **Artifacts** 
 
   ![mysql-result](screenshots/17.png)
 
-  > **ZAP** is automatically created by **DAST - OWASP ZAP Baseline Scan** job in [cd.yml](.github/workflows/cd.yml). Read more about it(How, Why it does) on google...
-
 ---
 
 <div align="center">
