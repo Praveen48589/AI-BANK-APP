@@ -196,14 +196,6 @@ All scan reports (OWASP, Trivy, ZAP) are uploaded as downloadable **Artifacts** 
 
   > **ZAP** is automatically created by **DAST - OWASP ZAP Baseline Scan** job in [cd.yml](.github/workflows/cd.yml). Read more about it(How, Why it does) on google...
 
-- **Network Validation**: 
-
-  ```bash
-  nc -zv <OLLAMA-PRIVATE-IP> 11434
-  ```
-
-  ![ollama-success](screenshots/18.png)
-
 ---
 
 <div align="center">
